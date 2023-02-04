@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <style type="text/css">
+    	.players {
+            width: 300px;
+            margin-top: 20px;
+        }
+
+        .player {
+            width: 40%;
+            padding: 10px;
+            display: inline-block;
+            margin: 1%;
+            vertical-align: top;
+        }
+
+        .points {
+        	margin-top: 5px;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="game">
+        <h3>Blackjack</h3>
+        <div class="game-body">
+            <div class="game-options">
+                <input type="button" id="btnStart" class="btn" value="Gioca" onclick="startblackjack()">
+                <input type="button" class="btn" value="Carta" onclick="hit()">
+                <input type="button" class="btn" value="Stai" onclick="stay()">
+            </div>
+            <div id="players" class="players">
+                
+            </div>
+            <div class="clear"></div>
+        </div>
+    </div>
+</body>
+<script type="text/javascript">
+        var suits = ["Cuori", "Quadri", "Fiori", "Picche"];
+        var values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+        var deck = new Array();
+        var players = new Array();
+        var currentPlayer = 0;
+        var playersNumber = 1;
+
+        function createDeck() {
+            deck = new Array();
+
+            for (var j = 2; j >= 0; j--) {
+            	for (var i = 0; i < values.length; i++) {
+	                for (var x = 0; x < suits.length; x++) {
+	                    var weight = parseInt(values[i]);
+	                    if (values[i] == "J" || values[i] == "Q" || values[i] == "K")
+	                        weight = 10;
+	                    if (values[i] == "A")
+	                        weight = 1;
+	                    var card = { Value: values[i], Suit: suits[x], Weight: weight };
+	                    deck.push(card);
+	                }
+	            }
+            }
+            
+        }
+
+        function shuffle() {
+            // Fisher-Yates algorithm
+            for (var i = 0; i < 1000; i++) {
+                var location1 = Math.floor((Math.random() * deck.length));
+                var location2 = Math.floor((Math.random() * deck.length));
+                var tmp = deck[location1];
+
+                deck[location1] = deck[location2];
+                deck[location2] = tmp;
+            }
+        }
+
+        function dealHands() {
+            // 2 cards each player
+            for (var i = 0; i < 2; i++) {
+                for (var x = 0; x < players.length; x++) {
+                    var card = deck.pop();
+                    players[x].Hand.push(card);
+                    renderCard(card, x);
+                    updatePoints();
+                }
+            }
+        }
+        
+        function renderCard(card, player) {
+            var hand = document.getElementById('hand_' + player);
+            hand.appendChild(getCardUI(card));
+        }
+
+        function getCardUI(card) {
+            // es. <div class="card">5 Fiori</div>
+            var el = document.createElement('div');
+            var icon = '';
+            el.className = 'card';
+            el.innerHTML = card.Value + '&nbsp;' + card.Suit;
+            return el;
+        }
+
+        function createPlayers(num) {
+            players = new Array();
+            for (var i = 0; i < num; i++) {
+                var hand = new Array();
+                var player = { Name: 'Player ' + i, ID: i, Points: 0, Hand: hand };
+                players.push(player);
+            }
+        }
+
+        function createPlayersDOM() {
+        	document.getElementById('players').innerHTML = '';
+            for (var i = 0; i < players.length; i++) {
+            	var div_player = document.createElement('div'); //<div></div>
+                var div_playerid = document.createElement('div');
+                var div_hand = document.createElement('div');
+                var div_points = document.createElement('div');
+                var div_pstatus = document.createElement('div');
+
+                div_points.className = 'points'; //<div class='points'></div>
+                div_points.id = 'points_' + i;
+                div_player.id = 'player_' + i; //<div id='player_0'></div>
+                div_player.className = 'player';
+                div_hand.id = 'hand_' + i;
+                div_pstatus.id = 'pstatus_' + i;
+
+                div_playerid.innerHTML = 'Player ' + players[i].ID;
+                div_player.appendChild(div_hand);
+                div_player.appendChild(div_points);
+                div_player.appendChild(div_pstatus);
+                document.getElementById('players').appendChild(div_player);
+            }
+        }
+
+        function startblackjack() {
+            document.getElementById('btnStart').value = 'Ricomincia';
+            currentPlayer = 0;
+            createDeck();
+            shuffle();
+            createPlayers(playersNumber);
+            createPlayersDOM();
+            dealHands();
+            document.getElementById('player_' + currentPlayer).classList.add('active');
+            console.log(players);
+            console.log(deck);
+        }
+        
+        function getPoints(player) {
+            var points = 0;
+            var hasAce = false;
+            for (var i = 0; i < players[player].Hand.length; i++) {
+                points += players[player].Hand[i].Weight;
+                if(players[player].Hand[i].Weight == 1){
+                    hasAce = true;
+                }
+            }
+            if(hasAce && points + 10 <= 21){
+                players[player].Points = points + 10;
+                return points;
+            }
+            players[player].Points = points;
+            return points;
+
+            /*
+                A quadri = 1
+                10 picche = 10
+                punti=21 
+
+                11 + 10 = 21
+
+                A quadri
+                10 picche
+                7 cuori
+
+                1+10+7 = 18
+                18 + 10 = 28
+            */
+        }
+
+        function updatePoints() {
+            for (var i = 0; i < players.length; i++) {
+                getPoints(i);
+                document.getElementById('points_' + i).innerHTML = 'Punti: ' + players[i].Points;
+            }
+        }
+        
+        function hit() {
+        	if (players[currentPlayer].Points <= 21) {
+	            var card = deck.pop();
+	            players[currentPlayer].Hand.push(card);
+	            renderCard(card, currentPlayer);
+	            updatePoints();
+	            check();
+	        }
+        }
+
+        function check() {
+            if (players[currentPlayer].Points > 21) {
+                document.getElementById('pstatus_'+players[currentPlayer].ID).innerHTML = 'Hai perso!';
+                document.getElementById("points_"+players[currentPlayer].ID).style.display = "block";
+            }
+        }
+
+        function stay() {
+        	if (players[currentPlayer].Points <= 21) {
+        		//document.getElementById('pstatus_'+players[currentPlayer].ID).innerHTML = 'Hai Vinto!';
+                document.getElementById("points_"+players[currentPlayer].ID).style.display = "block";
+        		document.getElementById('player_' + currentPlayer).classList.remove('active');
+        	}
+        }
+
+        window.addEventListener('load', function() {
+            createDeck();
+            shuffle();
+            createPlayers(playersNumber);
+        });
+
+</script>
+</html>
+________________________________________________________________________________________________________________________________________________________
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <style type="text/css">
+        .game {
+            width: 1024px;
+            min-height: 430px;
+        }
+    	.players {
+            width: 300px;
+            margin-top: 20px;
+        }
+
+        .player {
+            width: 30%;
+            padding: 10px;
+            display: inline-block;
+            margin: 1%;
+            vertical-align: top;
+        }
+
+        .points {
+        	margin-top: 5px;
+            font-weight: bold;
+            display: none;
+        }
+        .player.active {
+            border: solid 1px #222;
+        }
+        .playername {
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="game">
+        <h3>Blackjack</h3>
+        <div class="game-body">
+            <div class="game-options">
+                <input type="button" id="btnStart" class="btn" value="Gioca" onclick="startblackjack()">
+                <input type="button" class="btn" value="Carta" onclick="hit()">
+                <input type="button" class="btn" value="Stai" onclick="stay()">
+            </div>
+            <div id="players" class="players">
+            </div>
+            <div class="clear"></div>
+        </div>
+    </div>
+</body>
+<script type="text/javascript">
+	    var suits = ["Cuori", "Quadri", "Fiori", "Picche"];
+        var values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+        var deck = new Array();
+        var players;
+        var currentPlayer = 0;
+        var playersNumber = 3;
+
+        function createDeck() {
+            deck = new Array();
+
+            for (var j = 2; j >= 0; j--) {
+            	for (var i = 0; i < values.length; i++) {
+	                for (var x = 0; x < suits.length; x++) {
+	                    var weight = parseInt(values[i]);
+	                    if (values[i] == "J" || values[i] == "Q" || values[i] == "K")
+	                        weight = 10;
+	                    if (values[i] == "A")
+	                        weight = 1;
+	                    var card = { Value: values[i], Suit: suits[x], Weight: weight };
+	                    deck.push(card);
+	                }
+	            }
+            }
+            
+        }
+
+        function shuffle() {
+            // Fisher-Yates algorithm
+            for (var i = 0; i < 1000; i++) {
+                var location1 = Math.floor((Math.random() * deck.length));
+                var location2 = Math.floor((Math.random() * deck.length));
+                var tmp = deck[location1];
+
+                deck[location1] = deck[location2];
+                deck[location2] = tmp;
+            }
+        }
+
+        function dealHands() {
+            // 2 cards each player
+            for (var i = 0; i < 2; i++) {
+                for (var x = 0; x < players.length; x++) {
+                    var card = deck.pop();
+                    players[x].Hand.push(card);
+                    renderCard(card, x);
+                    updatePoints();
+                }
+            }
+        }
+        
+        function renderCard(card, player) {
+            var hand = document.getElementById('hand_' + player);
+            hand.appendChild(getCardUI(card));
+        }
+
+        function getCardUI(card) {
+            var el = document.createElement('div');
+            var icon = '';
+            el.className = 'card';
+            el.innerHTML = card.Value + '&nbsp;' + card.Suit;
+            return el;
+        }
+
+        function createPlayers(num) {
+            players = new Array();
+            for (var i = 0; i < num; i++) {
+                var hand = new Array();
+                var player = { Name: 'Player ' + i, ID: i, Points: 0, Hand: hand };
+                players.push(player);
+            }
+        }
+
+        function createPlayersDOM() {
+        	document.getElementById('players').innerHTML = '';
+            for (var i = 0; i < players.length; i++) {
+            	var div_player = document.createElement('div');
+                var div_playerid = document.createElement('div');
+                var div_hand = document.createElement('div');
+                var div_points = document.createElement('div');
+                var div_pstatus = document.createElement('div');
+
+                div_points.className = 'points';
+                div_points.id = 'points_' + i;
+                div_player.id = 'player_' + i;
+                div_playerid.className = 'playername';
+                div_player.className = 'player';
+                div_hand.id = 'hand_' + i;
+                div_pstatus.id = 'pstatus_' + i;
+
+                div_playerid.innerHTML = 'Player ' + (players[i].ID+1);
+                div_player.appendChild(div_playerid);
+                div_player.appendChild(div_hand);
+                div_player.appendChild(div_points);
+                div_player.appendChild(div_pstatus);
+                document.getElementById('players').appendChild(div_player);
+            }
+        }
+
+        function startblackjack() {
+            document.getElementById('btnStart').value = 'Ricomincia';
+            currentPlayer = 0;
+            createDeck();
+            shuffle();
+            createPlayers(playersNumber);
+            createPlayersDOM();
+            dealHands();
+            document.getElementById('player_' + currentPlayer).classList.add('active');
+        }
+        
+        function getPoints(player) {
+            var points = 0;
+            var hasAce = false;
+            for (var i = 0; i < players[player].Hand.length; i++) {
+                points += players[player].Hand[i].Weight;
+                if(players[player].Hand[i].Weight == 1){
+                    hasAce = true;
+                }
+            }
+            if(hasAce && points + 10 <= 21){
+                players[player].Points = points + 10;
+                return points;
+            }
+            players[player].Points = points;
+            return points;
+        }
+
+        function updatePoints() {
+            for (var i = 0; i < players.length; i++) {
+                getPoints(i);
+                document.getElementById('points_' + i).innerHTML = 'Punti: ' + players[i].Points;
+            }
+        }
+        
+        function hit() {
+        	if (players[currentPlayer].Points <= 21) {
+	            var card = deck.pop();
+	            players[currentPlayer].Hand.push(card);
+	            renderCard(card, currentPlayer);
+	            updatePoints();
+	            check();
+	        }
+        }
+
+        function check() {
+            if (players[currentPlayer].Points > 21) {
+                document.getElementById('pstatus_'+players[currentPlayer].ID).innerHTML = 'Hai perso!';
+                document.getElementById("points_"+players[currentPlayer].ID).style.display = "block";
+                changeplayer();
+            }
+        }
+
+        function stay() {
+        	if (players[currentPlayer].Points <= 21) {
+                document.getElementById("points_"+players[currentPlayer].ID).style.display = "block";
+        		document.getElementById('player_' + currentPlayer).classList.remove('active');
+                changeplayer();
+        	}
+        }
+
+        function changeplayer(){
+            if (currentPlayer != players.length - 1) {
+                document.getElementById('player_' + currentPlayer).classList.remove('active');
+                currentPlayer += 1;
+                document.getElementById('player_' + currentPlayer).classList.add('active');
+            } else {
+                //game end
+                console.log("hit the end");
+            }
+        }
+
+        window.addEventListener('load', function() {
+            createDeck();
+            shuffle();
+            createPlayers(playersNumber);
+        });
+</script>
+</html>
